@@ -5,13 +5,13 @@
 #include <stack>
 
 class Graph {
-    int vertex; // Number of vertices
-    std::vector<std::vector<int>> adj; // Adjacency list for the graph
-    std::vector<std::vector<int>> rev_adj; // Adjacency list for the reversed graph
-
 public:
-    Graph(int vertex);
+    int V;  // Number of vertices
+    
+    std::vector<std::vector<int>> adj;  // Adjacency list for the graph
+    std::vector<std::vector<int>> rev_adj;  // Adjacency list for the reversed graph
 
+    Graph(int V);
     void addEdge(int u, int v);
     void printSCCs();
 
@@ -20,4 +20,4 @@ private:
     void dfs(int v, std::vector<bool>& visited, std::vector<int>& component);
 };
 
-#endif 
+#endif  // GRAPH_HPP

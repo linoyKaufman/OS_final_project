@@ -2,10 +2,10 @@
 #include <iostream>
 #include <algorithm>
 
-Graph::Graph(int vertex) : vertex(vertex), adj(vertex + 1), rev_adj(vertex + 1) {}
+Graph::Graph(int vertex) : V(vertex), adj(vertex + 1), rev_adj(vertex + 1) {}
 
 void Graph::addEdge(int u, int v) {
-    if (u < 1 || u > vertex || v < 1 || v > vertex) {
+    if (u < 1 || u > V || v < 1 || v > V) {
         std::cerr << "Error: invalid vertex index: " << u << " or " << v << std::endl;
         return;
     }
@@ -34,10 +34,10 @@ void Graph::dfs(int v, std::vector<bool>& visited, std::vector<int>& component) 
 
 void Graph::printSCCs() {
     std::stack<int> Stack;
-    std::vector<bool> visited(vertex + 1, false);
+    std::vector<bool> visited(V + 1, false);
 
     // Fill vertices in stack according to their finishing times
-    for (int i = 1; i <= vertex; i++) {
+    for (int i = 1; i <= V; i++) {
         if (!visited[i])
             fillOrder(i, visited, Stack);
     }
