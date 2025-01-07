@@ -22,6 +22,11 @@ public:
     // Get the children of a given node
     std::vector<int> getChildren(int node) const;
 
+    // Kruskal's algorithm to find the MST
+    Tree kruskalMST();
+
+    Tree primMST();
+
 private:
     // Data members
     std::vector<int> parent; // Parent array for each vertex
@@ -29,6 +34,12 @@ private:
 
     // Helper method to detect cycles in the graph
     bool hasCycle(int v, std::vector<bool>& visited, int parent);
+
+    // Helper method for find (used in union-find)
+    int find(int u, std::vector<int>& parent);
+
+    // Helper method for union (used in union-find)
+    void unite(int u, int v, std::vector<int>& parent, std::vector<int>& rank);
 };
 
-#endif 
+#endif  // TREE_HPP

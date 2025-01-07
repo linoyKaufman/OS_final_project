@@ -1,58 +1,85 @@
 #include "Tree.hpp"
+#include <queue>
+#include <tuple>
+#include <algorithm>
 
 Tree::Tree(int vertex) : Graph(vertex), parent(vertex + 1, -1), visited(vertex + 1, false) {}
 
-bool Tree::isTree() {
-    std::fill(visited.begin(), visited.end(), false);
-    if (hasCycle(1, visited, -1)) {
-        return false; // Graph contains a cycle
+Tree Tree::primMST() {
+    Tree mst(V);
+    std::vector<bool> inMST(V + 1, false);
+    std::priority_queue<std::tuple<int, int, int>, std::vector<std::tuple<int, int, int>>, std::greater<>> pq;
+
+    // Start from vertex 1 (arbitrary choice)
+    inMST[1] = true;
+    for (int v : adj[1]) {
+        pq.push({1, v, 0}); // Weight is 0 for unweighted graph
     }
 
-    // Check if all vertices are visited (graph is connected)
-    for (int i = 1; i <= V; i++) {
-        if (!visited[i]) return false;
-    }
-    return true;
-}
+    while (!pq.empty()) {
+        auto [u, v, weight] = pq.top();
+        pq.pop();
 
-void Tree::dfsTree(int v, int p) {
-    visited[v] = true;
-    parent[v] = p;
+        if (inMST[v]) continue;
 
-    for (int u : adj[v]) {
-        if (!visited[u]) {
-            dfsTree(u, v);
+        inMST[v] = true;
+        mst.addEdge(u, v);
+
+        for (int neighbor : adj[v]) {
+            if (!inMST[neighbor]) {
+                pq.push({v, neighbor, 0}); // Weight is 0 for unweighted graph
+            }
         }
     }
+    return mst;
 }
 
-int Tree::getParent(int node) const {
-    if (node < 1 || node > V) {
-        std::cerr << "Error: Node out of range" << std::endl;
-        return -1;
-    }
-    return parent[node];
-}
+Tree Tree::kruskalMST() {
+    Tree mst(V); // MST tree with the same number of vertices
+    std::vector<std::tuple<int, int, int>> edges; // {weight, u, v}
 
-std::vector<int> Tree::getChildren(int node) const {
-    std::vector<int> children;
-    for (int u : adj[node]) {
-        if (parent[u] == node) {
-            children.push_back(u);
+    // Collect all edges
+    for (int u = 1; u <= V; ++u) {
+        for (int v : adj[u]) {
+            edges.push_back({0, u, v}); // Weight is 0 for unweighted graph
         }
     }
-    return children;
-}
 
-bool Tree::hasCycle(int v, std::vector<bool>& visited, int parent) {
-    visited[v] = true;
+    // Sort edges by weight
+    std::sort(edges.begin(), edges.end());
 
-    for (int u : adj[v]) {
-        if (!visited[u]) {
-            if (hasCycle(u, visited, v)) return true;
-        } else if (u != parent) {
-            return true; // Back edge detected
+    // Disjoint set union-find initialization
+    std::vector<int> parent(V + 1), rank(V + 1, 0);
+    for (int i = 1; i <= V; ++i) {
+        parent[i] = i;
+    }
+
+    // Kruskal's algorithm: adding edges to the MST
+    for (auto [weight, u, v] : edges) {
+        if (find(u, parent) != find(v, parent)) {
+            mst.addEdge(u, v);
+            unite(u, v, parent, rank);
         }
     }
-    return false;
+
+    return mst;
+}
+
+// Helper method to find the representative of a set with path compression
+int Tree::find(int u, std::vector<int>& parent) {
+    if (parent[u] != u) {
+        parent[u] = find(parent[u], parent); // Path compression
+    }
+    return parent[u];
+}
+
+// Helper method to unite two sets
+void Tree::unite(int u, int v, std::vector<int>& parent, std::vector<int>& rank) {
+    u = find(u, parent);
+    v = find(v, parent);
+    if (u != v) {
+        if (rank[u] < rank[v]) std::swap(u, v);
+        parent[v] = u;
+        if (rank[u] == rank[v]) ++rank[u];
+    }
 }
