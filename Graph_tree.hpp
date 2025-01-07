@@ -1,24 +1,24 @@
-#ifndef GRAPH_HPP
-#define GRAPH_HPP
+#ifndef TREE_HPP
+#define TREE_HPP
 
+#include "Graph.hpp"
 #include <vector>
-#include <stack>
+#include <iostream>
 
-class Graph {
-    int vertex; // Number of vertices
-    std::vector<std::vector<int>> adj; // Adjacency list for the graph
-    std::vector<std::vector<int>> rev_adj; // Adjacency list for the reversed graph
-
+class Tree : public Graph {
 public:
-    Graph(int vertex);
+    Tree(int vertex);
 
-    void addEdge(int u, int v);
-    void printSCCs();
+    bool isTree();
+    void dfsTree(int v, int p = -1);
+    int getParent(int node) const;
+    std::vector<int> getChildren(int node) const;
 
 private:
-    void fillOrder(int v, std::vector<bool>& visited, std::stack<int>& Stack);
-    void dfs(int v, std::vector<bool>& visited, std::vector<int>& component);
+    std::vector<int> parent; // Stores the parent of each node
+    std::vector<bool> visited; // Tracks visited nodes for DFS
+
+    bool hasCycle(int v, std::vector<bool>& visited, int parent);
 };
 
-#endif 
-
+#endif // TREE_HPP
