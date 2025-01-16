@@ -1,6 +1,6 @@
 # Compiler and flags
 CXX = g++
-CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic
+CXXFLAGS = -std=c++17 -Wall -Wextra -pedantic -g 
 
 # Files and directories
 SERVER_SRC = server.cpp Graph.cpp MST_algorithm.cpp Reactor.cpp Tree.cpp UnionFind.cpp
