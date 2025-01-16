@@ -4,6 +4,11 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#include <thread>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
+#include <memory>
 #include "Graph.hpp"
 #include "MST_algorithm.hpp"
 #include "MST_factory.hpp"
@@ -11,6 +16,64 @@
 #include "Reactor.hpp"
 
 #define PORT 9034
+
+// Pipeline and thread pool data structures
+struct Request {
+    int clientFd;
+    std::string command;
+    std::shared_ptr<Tree> graph;
+};
+
+std::queue<Request> requestQueue;
+std::mutex queueMutex;
+std::condition_variable queueCV;
+bool serverRunning = true;
+
+void pipelineWorker() {
+    while (serverRunning) {
+        Request request;
+        {
+            std::unique_lock<std::mutex> lock(queueMutex);
+            queueCV.wait(lock, [] { return !requestQueue.empty() || !serverRunning; });
+            if (!serverRunning && requestQueue.empty()) return;
+
+            request = requestQueue.front();
+            requestQueue.pop();
+        }
+
+        // Process the request
+        std::istringstream input(request.command);
+        std::ostringstream result;
+        std::string cmd;
+        input >> cmd;
+
+        if (cmd == "Newgraph") {
+            int n, m;
+            input >> n >> m;
+            request.graph = std::make_shared<Tree>(n);
+            for (int i = 0; i < m; ++i) {
+                int u, v;
+                input >> u >> v;
+                request.graph->addEdge(u, v);
+            }
+            result << "Graph created with " << n << " vertices and " << m << " edges.\n";
+        } else if (cmd == "prim") {
+            auto mst = request.graph->primMST();
+            result << "MST created using Prim.\n";
+            // Add any MST metrics output here if needed
+        } else if (cmd == "kruskal") {
+            auto mst = request.graph->kruskalMST();
+            result << "MST created using Kruskal.\n";
+            // Add any MST metrics output here if needed
+        } else {
+            result << "Unknown command.\n";
+        }
+
+        // Send response back to client
+        std::string response = result.str();
+        send(request.clientFd, response.c_str(), response.size(), 0);
+    }
+}
 
 void handleClient(int fd, Tree& graph) {
     char buffer[1024];
@@ -25,40 +88,26 @@ void handleClient(int fd, Tree& graph) {
 
         buffer[bytesRead] = '\0';
         std::string command(buffer);
-        std::istringstream input(command);
 
-        std::string cmd;
-        input >> cmd;
-
-        if (cmd == "Newgraph") {
-            int n, m;
-            input >> n >> m;
-            graph = Tree(n);
-            for (int i = 0; i < m; ++i) {
-                int u, v;
-                input >> u >> v;
-                graph.addEdge(u, v);
-            }
-            std::cout << "Graph created with " << n << " vertices and " << m << " edges." << std::endl;
-            send(fd, "Graph created.\n", 15, 0);
-        } else if (cmd == "prim") {
-            std::ostringstream result;
-            graph=graph.primMST();  // This prints to stdout; you can redirect it to the result stream if needed
-            std::cout << "prim algorithm executed for client: " << fd << std::endl;
-        } else if (cmd == "kruskal") {
-            std::ostringstream result;
-            graph=graph.kruskalMST();  // This prints to stdout; you can redirect it to the result stream if needed
-            std::cout << "kruskal algorithm executed for client: " << fd << std::endl;            
-        } else {
-            std::cout << "Unknown command from client: " << fd << std::endl;
-            send(fd, "Unknown command.\n", 17, 0);
+        // Push request to pipeline
+        {
+            std::lock_guard<std::mutex> lock(queueMutex);
+            requestQueue.push({fd, command, std::make_shared<Tree>(graph)});
         }
+        queueCV.notify_one();
     }
 }
 
 int main() {
     Reactor reactor;
     Tree graph(0);
+
+    // Thread pool setup
+    int numThreads = 4; // Adjust as needed
+    std::vector<std::thread> workers;
+    for (int i = 0; i < numThreads; ++i) {
+        workers.emplace_back(pipelineWorker);
+    }
 
     int listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener < 0) {
@@ -96,6 +145,16 @@ int main() {
     });
 
     reactor.start();
+
+    // Graceful shutdown
+    serverRunning = false;
+    queueCV.notify_all();
+    for (auto& worker : workers) {
+        if (worker.joinable()) {
+            worker.join();
+        }
+    }
+
     close(listener);
 
     return 0;
