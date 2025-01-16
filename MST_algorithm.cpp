@@ -1,4 +1,5 @@
 #include "MST_algorithm.hpp"
+#include "UnionFind.hpp"
 #include <vector>
 #include <queue>
 #include <tuple>
