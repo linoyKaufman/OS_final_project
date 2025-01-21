@@ -43,44 +43,67 @@ void pipelineWorker() {
 
         std::cout << "Processing request: " << request.command << " from client " << request.clientFd << std::endl;
 
-        // Process the request
-        std::istringstream input(request.command);
         std::ostringstream result;
-        std::string cmd;
-        input >> cmd;
+        std::istringstream input(request.command);
+        std::string command;
+        std::getline(input, command, ';');
 
-        if (cmd == "Newgraph") {
-            int n, m;
-            input >> n >> m;
-            std::cout << "Creating new graph with " << n << " vertices and " << m << " edges." << std::endl;
-            request.graph = std::make_shared<Tree>(n);
-            for (int i = 0; i < m; ++i) {
-                int u, v;
-                input >> u >> v;
-                request.graph->addEdge(u, v);
+if (command == "MST") {
+    int n, m;
+    if (!(input >> n >> m) || n <= 0 || m < 0) {
+        result << "Error: invalid graph parameters.\n";
+    } else {
+        request.graph = std::make_shared<Tree>(n);
+        bool validEdges = true;
+
+        for (int i = 0; i < m; ++i) {
+            int u, v, weight;
+            if (!(input >> u >> v >> weight)) {
+                validEdges = false;
+                break;
             }
-            result << "Graph created with " << n << " vertices and " << m << " edges.\n";
-        } else if (cmd == "prim") {
-            std::cout << "Executing Prim's MST algorithm for client " << request.clientFd << std::endl;
-            auto mst = request.graph->primMST();
-            result << "MST created using Prim.\n";
-        } else if (cmd == "kruskal") {
-            std::cout << "Executing Kruskal's MST algorithm for client " << request.clientFd << std::endl;
-            auto mst = request.graph->kruskalMST();
-            result << "MST created using Kruskal.\n";
+            request.graph->addEdge(u, v, weight);
+        } if (!validEdges) {
+            result << "Error: invalid edge input.\n";
         } else {
-            std::cout << "Unknown command received: " << cmd << " from client " << request.clientFd << std::endl;
+            result << "Graph created with " << n << " vertices and " << m << " edges.\n";
+        }
+    }} else if (command == "prim") {
+    if (request.graph) {
+        std::cout << "Executing Prim's MST algorithm for client " << request.clientFd << std::endl;
+        auto mst = request.graph->primMST();
+
+        std::ostringstream mstOutput;
+        for (int u = 1; u <= mst.getVertexCount(); ++u) {
+            for (const Edge& edge : mst.getAdjList()[u]) {
+                mstOutput << u << " -> " << edge.vertex << " (weight: " << edge.weight << ")\n";
+            }
+        }
+        result << "MST created using Prim:\n" << mstOutput.str();
+    } else {
+        result << "Error: no graph available for MST.\n";
+    }
+  
+         }else if (command == "kruskal") {
+            if (request.graph) {
+                std::cout << "Executing Kruskal's MST algorithm for client " << request.clientFd << std::endl;
+                auto mst = request.graph->kruskalMST();
+                result << "MST created using Kruskal.\n";
+            } else {
+                result << "Error: no graph available for MST.\n";
+            }
+        } else {
+            std::cout << "Unknown command received: " << command << " from client " << request.clientFd << std::endl;
             result << "Unknown command.\n";
         }
 
-        // Send response back to client
         std::string response = result.str();
         send(request.clientFd, response.c_str(), response.size(), 0);
         std::cout << "Response sent to client " << request.clientFd << ": " << response << std::endl;
     }
 }
 
-void handleClient(int fd, Tree& graph) {
+void handleClient(int fd, std::shared_ptr<Tree> graph) {
     char buffer[1024];
 
     while (true) {
@@ -95,21 +118,20 @@ void handleClient(int fd, Tree& graph) {
         std::string command(buffer);
         std::cout << "Received command from client " << fd << ": " << command << std::endl;
 
-        // Push request to pipeline
         {
             std::lock_guard<std::mutex> lock(queueMutex);
-            requestQueue.push({fd, command, std::make_shared<Tree>(graph)});
+            requestQueue.push({fd, command, graph});
         }
         queueCV.notify_one();
     }
 }
 
+
 int main() {
     Reactor reactor;
-    Tree graph(0);
+    auto graph = std::make_shared<Tree>(0);
 
-    // Thread pool setup
-    int numThreads = 4; // Adjust as needed
+    int numThreads = 4;
     std::vector<std::thread> workers;
     for (int i = 0; i < numThreads; ++i) {
         workers.emplace_back(pipelineWorker);
@@ -123,9 +145,9 @@ int main() {
     }
 
     struct sockaddr_in serverAddr;
-    serverAddr.sin_family = AF_INET;              // Address family
-    serverAddr.sin_port = htons(PORT);            // Port number (network byte order)
-    serverAddr.sin_addr.s_addr = INADDR_ANY;      // Bind to any available address
+    serverAddr.sin_family = AF_INET;
+    serverAddr.sin_port = htons(PORT);
+    serverAddr.sin_addr.s_addr = INADDR_ANY;
 
     if (bind(listener, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) < 0) {
         perror("Bind failed");
@@ -153,7 +175,6 @@ int main() {
 
     reactor.start();
 
-    // Graceful shutdown
     serverRunning = false;
     queueCV.notify_all();
     for (auto& worker : workers) {

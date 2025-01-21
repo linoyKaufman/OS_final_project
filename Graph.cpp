@@ -2,34 +2,45 @@
 #include <iostream>
 #include <algorithm>
 
+// מבנה קשת עם משקל
 Graph::Graph(int vertex) : V(vertex), adj(vertex + 1), rev_adj(vertex + 1) {}
 
-void Graph::addEdge(int u, int v) {
+void Graph::addEdge(int u, int v, int weight) {
     if (u < 1 || u > V || v < 1 || v > V) {
         std::cerr << "Error: invalid vertex index: " << u << " or " << v << std::endl;
         return;
     }
-    adj[u].push_back(v);
-    rev_adj[v].push_back(u);
-}
 
+    adj[u].push_back({v, weight});       // הוספת קשת קדימה עם משקל
+    rev_adj[v].push_back({u, weight});   // הוספת קשת הפוכה עם משקל
+}
 
 void Graph::fillOrder(int v, std::vector<bool>& visited, std::stack<int>& Stack) {
     visited[v] = true;
-    for (int i : adj[v]) {
-        if (!visited[i])
-            fillOrder(i, visited, Stack);
+
+    // לולאה דרך הקשתות היוצאות מהקודקוד הנוכחי
+    for (const auto& edge : adj[v]) {
+        int neighbor = edge.vertex; // הקודקוד השכן
+        if (!visited[neighbor]) {
+            fillOrder(neighbor, visited, Stack);
+        }
     }
+
+    // הוספת הקודקוד למחסנית לאחר סיום כל הצאצאים
     Stack.push(v);
 }
 
 void Graph::dfs(int v, std::vector<bool>& visited, std::vector<int>& component) {
     visited[v] = true;
-    component.push_back(v);
-    for (int i : rev_adj[v]) {
-        if (!visited[i])
-            dfs(i, visited, component);
-    }
+    component.push_back(v); // הוספת הקודקוד לרשימת הקומפוננטה
+
+    // לולאה דרך הקשתות ההפוכות של הקודקוד הנוכחי
+    for (const auto& edge : rev_adj[v]) {
+        int neighbor = edge.vertex; // הקודקוד השכן בקשת ההפוכה
+        if (!visited[neighbor]) {
+            dfs(neighbor, visited, component);
+      }
+   }
 }
 
 void Graph::printSCCs() {

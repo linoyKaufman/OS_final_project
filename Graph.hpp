@@ -3,19 +3,29 @@
 
 #include <vector>
 #include <stack>
-#include <iostream>
+
+// מבנה לקשת עם משקל
+struct Edge {
+    int vertex;
+    int weight;
+};
 
 class Graph {
-public:
-    int V; // Number of vertices
-    std::vector<std::vector<int>> adj; // Adjacency list
-    std::vector<std::vector<int>> rev_adj; // Reverse adjacency list for SCCs
+private:
+    int V; // מספר הצמתים
+    std::vector<std::vector<Edge>> adj; // רשימת סמיכות
+    std::vector<std::vector<Edge>> rev_adj; // רשימת סמיכות הפוכה
+    friend class MST_algorithm;
 
-    Graph(int vertex);
-    void addEdge(int u, int v);
     void fillOrder(int v, std::vector<bool>& visited, std::stack<int>& Stack);
     void dfs(int v, std::vector<bool>& visited, std::vector<int>& component);
+
+public:
+    int getVertexCount() const { return V; }
+    const std::vector<std::vector<Edge>>& getAdjList() const {return adj;}
+    Graph(int vertex);
+    void addEdge(int u, int v, int weight);
     void printSCCs();
 };
 
-#endif // GRAPH_HPP   
+#endif // GRAPH_HPP

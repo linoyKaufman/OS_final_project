@@ -1,70 +1,95 @@
+#include <limits>
 #include "Tree.hpp"
 #include <queue>
 #include <tuple>
 #include <algorithm>
+#include "Graph.hpp"
+#include "UnionFind.hpp"
+
 
 Tree::Tree(int vertex) : Graph(vertex), parent(vertex + 1, -1), visited(vertex + 1, false) {}
 
 Tree Tree::primMST() {
+    int V = getVertexCount();
+    std::cout << "Graph has " << V << " vertices.\n";
+
     Tree mst(V);
     std::vector<bool> inMST(V + 1, false);
-    std::priority_queue<std::tuple<int, int, int>, std::vector<std::tuple<int, int, int>>, std::greater<>> pq;
+    std::vector<int> key(V + 1, std::numeric_limits<int>::max());
+    std::vector<int> parent(V + 1, -1);
 
-    // Start from vertex 1 (arbitrary choice)
-    inMST[1] = true;
-    for (int v : adj[1]) {
-        pq.push({1, v, 0}); // Weight is 0 for unweighted graph
-    }
+    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<>> pq;
+    pq.push({0, 1}); // התחלה מהצומת הראשון
+    key[1] = 0;
 
     while (!pq.empty()) {
-        auto [u, v, weight] = pq.top();
+        int u = pq.top().second;
         pq.pop();
 
-        if (inMST[v]) continue;
+        if (u < 1 || u > V) {
+            std::cerr << "Error: invalid vertex " << u << " accessed.\n";
+            continue;
+        }
 
-        inMST[v] = true;
-        mst.addEdge(u, v);
+        if (inMST[u]) continue;
+        inMST[u] = true;
+        std::cout << "Processing vertex: " << u << std::endl;
 
-        for (int neighbor : adj[v]) {
-            if (!inMST[neighbor]) {
-                pq.push({v, neighbor, 0}); // Weight is 0 for unweighted graph
+        for (const Edge& edge : getAdjList()[u]) {
+            int v = edge.vertex;
+            int weight = edge.weight;
+
+            std::cout << "Checking edge from " << u << " to " << v << " with weight " << weight << std::endl;
+
+            if (!inMST[v] && weight < key[v]) {
+                key[v] = weight;
+                parent[v] = u;
+                pq.push({key[v], v});
             }
         }
     }
+
+    for (int v = 2; v <= V; ++v) {
+        if (parent[v] != -1) {
+            mst.addEdge(parent[v], v, key[v]);
+            std::cout << "Edge added to MST: " << parent[v] << " -> " << v << " with weight " << key[v] << std::endl;
+        }
+    }
+
     return mst;
 }
 
 Tree Tree::kruskalMST() {
-    Tree mst(V); // MST tree with the same number of vertices
-    std::vector<std::tuple<int, int, int>> edges; // {weight, u, v}
+    int V = getVertexCount(); // שימוש בפונקציית גישה
+    Tree mst(V);
+    std::vector<Edge> edges;
 
-    // Collect all edges
+    // בניית רשימת קשתות
     for (int u = 1; u <= V; ++u) {
-        for (int v : adj[u]) {
-            edges.push_back({0, u, v}); // Weight is 0 for unweighted graph
+        for (const Edge& edge : getAdjList()[u]) { // שימוש בפונקציית גישה
+            edges.push_back(edge);
         }
     }
 
-    // Sort edges by weight
-    std::sort(edges.begin(), edges.end());
+    // מיון הקשתות לפי משקל
+    std::sort(edges.begin(), edges.end(), [](const Edge& a, const Edge& b) {
+        return a.weight < b.weight;
+    });
 
-    // Disjoint set union-find initialization
-    std::vector<int> parent(V + 1), rank(V + 1, 0);
-    for (int i = 1; i <= V; ++i) {
-        parent[i] = i;
-    }
+    // Union-Find
+    UnionFind uf(V + 1);
+    for (const Edge& edge : edges) {
+        int u = edge.vertex;
+        int v = edge.weight;
 
-    // Kruskal's algorithm: adding edges to the MST
-    for (auto [weight, u, v] : edges) {
-        if (find(u, parent) != find(v, parent)) {
-            mst.addEdge(u, v);
-            unite(u, v, parent, rank);
+        if (uf.find(u) != uf.find(v)) {
+            mst.addEdge(u, v, edge.weight); // מוסיפים קשת ל-MST
+            uf.unionSets(u, v); // מחברים בין קבוצות
         }
     }
 
     return mst;
 }
-
 // Helper method to find the representative of a set with path compression
 int Tree::find(int u, std::vector<int>& parent) {
     if (parent[u] != u) {
@@ -83,3 +108,5 @@ void Tree::unite(int u, int v, std::vector<int>& parent, std::vector<int>& rank)
         if (rank[u] == rank[v]) ++rank[u];
     }
 }
+
+

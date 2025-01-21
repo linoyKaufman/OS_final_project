@@ -9,36 +9,33 @@
 
 // Prim's Algorithm (using a priority queue)
 int MST_algorithm::primMST(Graph& graph) {
-    if (graph.V == 0) return 0;  // Handle empty graph
+    if (graph.V == 0) return 0; // Handle empty graph
 
-    // Minimum weight edge for each vertex
-    std::vector<int> key(graph.V + 1, std::numeric_limits<int>::max());
-    // Track vertices in MST
-    std::vector<bool> inMST(graph.V + 1, false);
-    // Min-heap: priority queue with pairs {key, vertex}
-    std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> pq;
+    int V = graph.V;
+    std::vector<int> key(V + 1, std::numeric_limits<int>::max());
+    std::vector<bool> inMST(V + 1, false);
+    key[1] = 0;
 
+    auto cmp = [&key](int left, int right) { return key[left] > key[right]; };
+    std::priority_queue<int, std::vector<int>, decltype(cmp)> pq(cmp);
+
+    pq.push(1);
     int mstWeight = 0;
-    key[1] = 0; // Start from vertex 1 (adjusted for 1-based indexing)
-    pq.push(std::make_pair(0, 1)); // Insert {key, vertex}
 
     while (!pq.empty()) {
-        // Get the vertex with the smallest key value
-        std::pair<int, int> current = pq.top();
+        int u = pq.top();
         pq.pop();
-        int u = current.second; // Vertex number
 
-        if (inMST[u]) continue; // Skip if already included in MST
-        inMST[u] = true;
-        mstWeight += current.first;
+        if (!inMST[u]) {
+            inMST[u] = true;
+            mstWeight += key[u];
 
-        // Iterate over all adjacent vertices
-        if (u >= 1 && u <= graph.V) { // Safe bounds check for 1-based indexing
-            for (int v : graph.adj[u]) { // Adjacent vertices from adj list
-                int weight = 1; // Assuming weight of 1 for unweighted graph
+            for (const Edge& edge : graph.adj[u]) {
+                int v = edge.vertex;
+                int weight = edge.weight;
                 if (!inMST[v] && weight < key[v]) {
                     key[v] = weight;
-                    pq.push(std::make_pair(key[v], v)); // Insert {key, vertex} into heap
+                    pq.push(v);
                 }
             }
         }
@@ -49,37 +46,35 @@ int MST_algorithm::primMST(Graph& graph) {
 
 // Kruskal's Algorithm
 int MST_algorithm::kruskalMST(Graph& graph) {
-    if (graph.V == 0) return 0;  // Handle empty graph
+    if (graph.V == 0) return 0; // Handle empty graph
 
-    std::vector<std::tuple<int, int, int>> edges; // {weight, u, v}
-
-    // Collect all edges
-    for (int u = 1; u <= graph.V; ++u) { // Adjust for 1-based indexing
-        for (int v : graph.adj[u]) {
-            edges.emplace_back(1, u, v); // Assuming weight of 1 for unweighted graph
+    std::vector<Edge> edges;
+    for (int u = 1; u <= graph.V; ++u) {
+        for (const Edge& edge : graph.adj[u]) {
+            edges.push_back(edge);
         }
     }
 
     // Sort edges by weight
-    std::sort(edges.begin(), edges.end());
+    std::sort(edges.begin(), edges.end(), [](const Edge& a, const Edge& b) {
+        return a.weight < b.weight;
+    });
 
-    UnionFind uf(graph.V + 1); // Adjust for 1-based indexing
+    UnionFind uf(graph.V + 1);
     int mstWeight = 0;
 
-    // Process edges in ascending order of weight
-    for (const auto& edge : edges) {
-        int weight, u, v;
-        std::tie(weight, u, v) = edge;
+    for (const Edge& edge : edges) {
+        int u = edge.vertex;  // מקור
+        int v = edge.weight;  // יעד
 
-        if (uf.find(u) != uf.find(v)) { // If not in the same set
+        if (uf.find(u) != uf.find(v)) {
             uf.unionSets(u, v);
-            mstWeight += weight;
+            mstWeight += edge.weight;
         }
     }
 
     return mstWeight;
 }
-
 // Factory method to select MST algorithm
 int MST_algorithm::getMSTWeight(Graph& graph, Algorithm algo) {
     switch (algo) {
