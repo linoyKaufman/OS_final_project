@@ -4,7 +4,6 @@
 #include <vector>
 #include <stack>
 
-// מבנה לקשת עם משקל
 struct Edge {
     int vertex;
     int weight;
@@ -12,9 +11,9 @@ struct Edge {
 
 class Graph {
 private:
-    int V; // מספר הצמתים
-    std::vector<std::vector<Edge>> adj; // רשימת סמיכות
-    std::vector<std::vector<Edge>> rev_adj; // רשימת סמיכות הפוכה
+    int V; 
+    std::vector<std::vector<Edge>> adj; 
+    std::vector<std::vector<Edge>> rev_adj; 
     friend class MST_algorithm;
 
     void fillOrder(int v, std::vector<bool>& visited, std::stack<int>& Stack);
