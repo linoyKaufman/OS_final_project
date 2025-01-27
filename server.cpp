@@ -48,43 +48,64 @@ void pipelineWorker() {
         std::string command;
         std::getline(input, command, ';');
 
-if (command == "MST") {
-    int n, m;
-    if (!(input >> n >> m) || n <= 0 || m < 0) {
-        result << "Error: invalid graph parameters.\n";
-    } else {
-        request.graph = std::make_shared<Tree>(n);
-        bool validEdges = true;
+        if (command == "NewGraph") {
+            int n, m;
+            if (!(input >> n >> m) || n <= 0 || m < 0) {
+                result << "Error: invalid graph parameters.\n";
+            } else {
+                request.graph = std::make_shared<Tree>(n);
+                bool validEdges = true;
 
-        for (int i = 0; i < m; ++i) {
+                for (int i = 0; i < m; ++i) {
+                    int u, v, weight;
+                    if (!(input >> u >> v >> weight)) {
+                        validEdges = false;
+                        break;
+                    }
+                    request.graph->addEdge(u, v, weight);
+                }
+                if (!validEdges) {
+                    result << "Error: invalid edge input.\n";
+                } else {
+                    result << "Graph created with " << n << " vertices and " << m << " edges.\n";
+                }
+            }
+        } else if (command == "addEdge") {
             int u, v, weight;
             if (!(input >> u >> v >> weight)) {
-                validEdges = false;
-                break;
+                result << "Error: invalid edge parameters.\n";
+            } else if (request.graph) {
+                request.graph->addEdge(u, v, weight);
+                result << "Edge added: " << u << " -> " << v << " (weight: " << weight << ").\n";
+            } else {
+                result << "Error: no graph available to add edges.\n";
             }
-            request.graph->addEdge(u, v, weight);
-        } if (!validEdges) {
-            result << "Error: invalid edge input.\n";
-        } else {
-            result << "Graph created with " << n << " vertices and " << m << " edges.\n";
-        }
-    }} else if (command == "prim") {
-    if (request.graph) {
-        std::cout << "Executing Prim's MST algorithm for client " << request.clientFd << std::endl;
-        auto mst = request.graph->primMST();
+        } else if (command == "removeEdge") {
+            int u, v;
+            if (!(input >> u >> v)) {
+                result << "Error: invalid edge parameters.\n";
+            } else if (request.graph) {
+                request.graph->removeEdge(u, v);
+                result << "Edge removed: " << u << " -> " << v << ".\n";
+            } else {
+                result << "Error: no graph available to remove edges.\n";
+            }
+        } else if (command == "prim") {
+            if (request.graph) {
+                std::cout << "Executing Prim's MST algorithm for client " << request.clientFd << std::endl;
+                auto mst = request.graph->primMST();
 
-        std::ostringstream mstOutput;
-        for (int u = 1; u <= mst.getVertexCount(); ++u) {
-            for (const Edge& edge : mst.getAdjList()[u]) {
-                mstOutput << u << " -> " << edge.vertex << " (weight: " << edge.weight << ")\n";
+                std::ostringstream mstOutput;
+                for (int u = 1; u <= mst.getVertexCount(); ++u) {
+                    for (const Edge& edge : mst.getAdjList()[u]) {
+                        mstOutput << u << " -> " << edge.vertex << " (weight: " << edge.weight << ")\n";
+                    }
+                }
+                result << "MST created using Prim:\n" << mstOutput.str();
+            } else {
+                result << "Error: no graph available for MST.\n";
             }
-        }
-        result << "MST created using Prim:\n" << mstOutput.str();
-    } else {
-        result << "Error: no graph available for MST.\n";
-    }
-  
-         }else if (command == "kruskal") {
+        } else if (command == "kruskal") {
             if (request.graph) {
                 std::cout << "Executing Kruskal's MST algorithm for client " << request.clientFd << std::endl;
                 auto mst = request.graph->kruskalMST();
