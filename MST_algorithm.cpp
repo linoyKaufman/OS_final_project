@@ -64,8 +64,8 @@ int MST_algorithm::kruskalMST(Graph& graph) {
     int mstWeight = 0;
 
     for (const Edge& edge : edges) {
-        int u = edge.vertex;  // מקור
-        int v = edge.weight;  // יעד
+        int u = edge.vertex;  
+        int v = edge.weight;  
 
         if (uf.find(u) != uf.find(v)) {
             uf.unionSets(u, v);
