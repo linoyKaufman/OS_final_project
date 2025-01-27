@@ -54,22 +54,22 @@ std::string Client::receiveResponse() {
 
 int main() {
     try {
-        // יצירת אובייקט לקוח
+        
         Client client("127.0.0.1", 9034);
 
-        // התחברות לשרת
+        
         client.connectToServer();
 
-        // בניית בקשה (מחרוזת פשוטה)
+        
         std::string request = "MST;graph:{vertices:A,B,C,D;edges:A-B-5,B-C-3,C-D-7,A-D-10}";
 
-        // שליחת הבקשה
+        
         client.sendRequest(request);
 
-        // קבלת התשובה מהשרת
+        
         std::string response = client.receiveResponse();
 
-        // הצגת התשובה
+      
         std::cout << "Response: " << response << std::endl;
 
     } catch (const std::exception& e) {
