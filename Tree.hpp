@@ -6,40 +6,33 @@
 #include <iostream>
 
 class Tree : public Graph {
+    protected:
+    std::vector<std::vector<Edge>> adj;
 public:
-    // Constructor
-    explicit Tree(int vertex);
+    Tree(int vertex);
+    
 
-    // Check if the graph is a valid tree
-    bool isTree();
+    // Add this declaration if missing
+    std::vector<std::vector<Edge>>& getAdjList(){ return adj;}
 
-    // Perform DFS to set parent-child relationships
-    void dfsTree(int v, int p = -1);
 
-    // Get the parent of a given node
-    int getParent(int node) const;
-
-    // Get the children of a given node
-    std::vector<int> getChildren(int node) const;
-
-    // Kruskal's algorithm to find the MST
-    Tree kruskalMST();
+    const std::vector<std::vector<Edge>>& getAdjList() const{return adj;}
 
     Tree primMST();
+    Tree kruskalMST();
 
-private:
-    // Data members
-    std::vector<int> parent; // Parent array for each vertex
-    std::vector<bool> visited; // Visited array for DFS
-
-    // Helper method to detect cycles in the graph
-    bool hasCycle(int v, std::vector<bool>& visited, int parent);
-
-    // Helper method for find (used in union-find)
+    void removeEdge(int u, int v); // Ensure this is declared in the public section
+     // Helper method for find (used in union-find)
     int find(int u, std::vector<int>& parent);
 
     // Helper method for union (used in union-find)
     void unite(int u, int v, std::vector<int>& parent, std::vector<int>& rank);
+
+private:
+    // Other private members
+    std::vector<int> parent;
+    std::vector<bool>visited;
 };
 
 #endif  // TREE_HPP
+
